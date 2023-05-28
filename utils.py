@@ -7,7 +7,6 @@ import urllib.request
 import torch
 import cv2
 import requests
-
 import json
 
 
@@ -17,7 +16,7 @@ import json
 from segment_anything import build_sam, SamPredictor, SamAutomaticMaskGenerator,sam_model_registry
 
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
 def save_anno(image, anns, points_per_side, location):
     if len(anns) == 0:
         return
@@ -29,7 +28,7 @@ def save_anno(image, anns, points_per_side, location):
         color_mask = np.random.random((1, 3)).tolist()[0]
         for i in range(3):
             img[:,:,i] = color_mask[i]
-
+        
         m = [m for x in range(3)]
         m = np.swapaxes(m,0,2)
         m = np.swapaxes(m,0,1)
@@ -39,31 +38,12 @@ def save_anno(image, anns, points_per_side, location):
         # print(img.shape)
     mask_all = np.array(mask_all).sum(axis=0)
     mask_all *= 255
+    #np.save(f"output/{location}_{points_per_side}", mask_all)
     save_img = image/2+mask_all
     save_img = Image.fromarray(save_img.astype(np.uint8))
     save_img.save(f"output/{location}_{points_per_side}.png")
 
 
-def show_anns(image, anns):
-    plt.figure(figsize=(20,20))
-    plt.imshow(image, alpha=0.5)
-    if len(anns) == 0:
-        return
-    sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
-    ax = plt.gca()
-    ax.set_autoscale_on(False)
-    polygons = []
-    color = []
-    for ann in sorted_anns:
-        m = ann['segmentation']
-        img = np.ones((m.shape[0], m.shape[1], 3))
-        color_mask = np.random.random((1, 3)).tolist()[0]
-        for i in range(3):
-            img[:,:,i] = color_mask[i]
-        ax.imshow(np.dstack((img, m*1)))
-    plt.axis('off')
-    # plt.savefig(f"./{dataset}/SAM_only_{points_per_side}.png", bbox_inches='tight')
-    plt.show()
 
 
 def Poly_Anything(image,  points_per_side=16):
@@ -95,15 +75,18 @@ def find_the_best_mask(point, anns):
         if in_x and in_y:
             neighs.append(ann)
 
-    dict_ious = [{n['predicted_iou']:n['bbox']} for n in neighs]
-    return dict_ious[max(dict_ious)] if dict_ious else None
+    dict_ious = {}
+    for n in neighs:
+
+        dict_ious[n['predicted_iou']]= n['bbox']
+    return dict_ious[max(dict_ious)]
 
 
 
-def ann_to_polygon_ui(ann, poly):
-    coords = convert_box_xywh_to_xyxy(ann['bbox'])
-    if poly["polygons"]:
-      poly["polygons"].append({"coordinates": [{ "x": coords[0], "y": coords[1] },
+def ann_to_polygon_ui(box, poly):
+    coords = convert_box_xywh_to_xyxy(box)
+    if poly:
+      poly[0]["polygons"].append({"coordinates": [{ "x": coords[0], "y": coords[1] },
                                         { "x": coords[0], "y": coords[3] },
                                         { "x": coords[1], "y": coords[1] },
                                         { "x": coords[1], "y": coords[3] }],
@@ -117,14 +100,14 @@ def ann_to_polygon_ui(ann, poly):
                                            "color": "255,255,0",
                                           "opacity": "0.5"}]}
     return poly
-
+    
 
 
 
 if __name__ == '__main__' :
 
-    image_path = 'data/really_final.tiff'
-    location = "Nebraska"
+    image_path = 'data/Test001.jpg'
+    location = "test"
 
     #SAM
     sam_checkpoint = 'models/sam_vit_h_4b8939.pth'
@@ -137,19 +120,18 @@ if __name__ == '__main__' :
     image = cv2.imread(image_path)
     w,h = image.shape[0], image.shape[1]
 
-    #at least 90 pixels per side
-    points_per_side = min(w,h)//90
+    points_per_side = 16 # min(w,h)//90
     anns = Poly_Anything(image, points_per_side)
-    #dump annotation to json to use it for user interface
-    #with open(f'anns_{location}_{points_per_side}', 'w') as fout:
-    #    json.dump(anns, fout)
 
     save_anno(image, anns, points_per_side,location)
-    #find the best mask among all candidates for a point
-    #point = [1200,800]
-    #ann = find_the_best_mask(point, anns)
-    #print(ann)
+    np.save(f"output/{location}_{points_per_side}", anns)
+
+    point = [1200,800]
+    ann = find_the_best_mask(point, anns)
+    print(ann)
     #save_anno(image, ann, points_per_side,'point_to_poly')
-    #if ann:
-    #    poly = ann_to_polygon_ui(ann, [])
-        #print(poly)
+    if ann:
+        poly = ann_to_polygon_ui(ann, [])
+        print(poly)
+
+
