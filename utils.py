@@ -141,15 +141,15 @@ if __name__ == '__main__' :
     points_per_side = min(w,h)//90
     anns = Poly_Anything(image, points_per_side)
     #dump annotation to json to use it for user interface
-    with open(f'anns_{location}_{points_per_side}', 'w') as fout:
-        json.dump(anns, fout)
+    #with open(f'anns_{location}_{points_per_side}', 'w') as fout:
+    #    json.dump(anns, fout)
 
     save_anno(image, anns, points_per_side,location)
     #find the best mask among all candidates for a point
-    point = [1200,800]
-    ann = find_the_best_mask(point, anns)
+    #point = [1200,800]
+    #ann = find_the_best_mask(point, anns)
     #print(ann)
     #save_anno(image, ann, points_per_side,'point_to_poly')
-    if ann:
-        poly = ann_to_polygon_ui(ann, [])
+    #if ann:
+    #    poly = ann_to_polygon_ui(ann, [])
         #print(poly)
